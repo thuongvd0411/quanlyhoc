@@ -1,0 +1,5 @@
+{
+  "name": "Quản Lý học tập",
+  "description": "Ứng dụng theo dõi, quản lý và báo cáo thống kê kết quả học tập của học sinh hàng ngày và hàng tháng.",
+  "requestFramePermissions": []
+}
