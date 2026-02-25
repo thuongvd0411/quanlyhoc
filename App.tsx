@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Student, StudyRecord, Schedule } from './types';
+import { db } from './utils/firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import StudentList from './components/StudentList';
 import StudentDetails from './components/StudentDetails';
 import DailyEntryForm from './components/DailyEntryForm';
@@ -8,6 +10,7 @@ import AuthGuard from './components/AuthGuard';
 import { calculateMonthlyStats, formatCurrency } from './utils/helpers';
 
 const STORAGE_KEY = 'edu_tracking_data_v5';
+const FIREBASE_DOC_ID = 'studentsData_v5';
 
 const App: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -16,58 +19,94 @@ const App: React.FC = () => {
   const [isAddingRecord, setIsAddingRecord] = useState(false);
   const [hideValues, setHideValues] = useState(true);
 
-  // Khôi phục dữ liệu từ LocalStorage
-  useEffect(() => {
+  // Hàm lưu dữ liệu lên Firebase và Local Backup
+  const syncData = async (newStudents: Student[]) => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setStudents(parsed);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newStudents));
+      const docRef = doc(db, 'appData', FIREBASE_DOC_ID);
+      await setDoc(docRef, { students: newStudents });
+    } catch (e) {
+      console.error("Lỗi khi lưu dữ liệu lên Firebase:", e);
+    }
+  };
+
+  // Khôi phục và đồng bộ realtime từ Firebase
+  useEffect(() => {
+    const docRef = doc(db, 'appData', FIREBASE_DOC_ID);
+
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (Array.isArray(data.students)) {
+          setStudents(data.students);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.students));
+        }
+      } else {
+        // Khởi tạo/Migrate nếu Firebase lần đầu
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) {
+              setStudents(parsed);
+              syncData(parsed);
+            }
+          } else {
+            syncData([]);
+          }
+        } catch (e) {
+          console.error("Lỗi migration:", e);
         }
       }
-    } catch (e) {
-      console.error("Lỗi khi đọc dữ liệu từ LocalStorage:", e);
-    }
-  }, []);
+    }, (error) => {
+      console.error("Lỗi Firebase:", error);
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) setStudents(JSON.parse(saved));
+      } catch (e) { }
+    });
 
-  // Lưu dữ liệu vào LocalStorage khi state thay đổi
-  useEffect(() => {
-    try {
-      if (students) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
-      }
-    } catch (e) {
-      console.error("Lỗi khi lưu dữ liệu vào LocalStorage:", e);
-    }
-  }, [students]);
+    return () => unsubscribe();
+  }, []);
 
   // Thêm học sinh mới
   const addStudent = useCallback((name: string, className: string, baseSalary: number, schedules: Schedule[]) => {
     if (!name?.trim()) return;
-    const newStudent: Student = { 
-      id: "std_" + Date.now().toString(), 
-      fullName: name.trim(), 
-      className: className || 'Lớp 1', 
-      baseSalary: baseSalary || 0, 
-      schedules: Array.isArray(schedules) ? schedules : [], 
-      history: [] 
+    const newStudent: Student = {
+      id: "std_" + Date.now().toString(),
+      fullName: name.trim(),
+      className: className || 'Lớp 1',
+      baseSalary: baseSalary || 0,
+      schedules: Array.isArray(schedules) ? schedules : [],
+      history: []
     };
-    setStudents(prev => [...(prev || []), newStudent]);
+    setStudents(prev => {
+      const next = [...(prev || []), newStudent];
+      syncData(next);
+      return next;
+    });
   }, []);
 
   // Cập nhật học sinh
   const updateStudent = useCallback((id: string, name: string, className: string, baseSalary: number, schedules: Schedule[]) => {
-    setStudents(prev => (prev || []).map(s => 
-      s.id === id ? { ...s, fullName: name.trim(), className, baseSalary, schedules } : s
-    ));
+    setStudents(prev => {
+      const next = (prev || []).map(s =>
+        s.id === id ? { ...s, fullName: name.trim(), className, baseSalary, schedules } : s
+      );
+      syncData(next);
+      return next;
+    });
   }, []);
 
   // Xóa học sinh
   const deleteStudent = useCallback((id: string) => {
     if (!id) return;
     if (window.confirm('Bạn có chắc chắn muốn xóa hồ sơ học sinh này không? Hành động này không thể hoàn tác.')) {
-      setStudents(prev => (prev || []).filter(s => s && s.id !== id));
+      setStudents(prev => {
+        const next = (prev || []).filter(s => s && s.id !== id);
+        syncData(next);
+        return next;
+      });
       if (selectedStudentId === id) setSelectedStudentId(null);
     }
   }, [selectedStudentId]);
@@ -75,21 +114,25 @@ const App: React.FC = () => {
   // Lưu/Cập nhật bản ghi học tập
   const saveRecord = useCallback((recordData: Omit<StudyRecord, 'id'> | StudyRecord) => {
     if (!selectedStudentId || !recordData) return;
-    setStudents(prev => (prev || []).map(s => {
-      if (!s || s.id !== selectedStudentId) return s;
-      
-      let newHistory = Array.isArray(s.history) ? [...s.history] : [];
-      if ('id' in recordData && recordData.id) {
-        // Cập nhật bản ghi cũ
-        newHistory = newHistory.map(r => r.id === recordData.id ? (recordData as StudyRecord) : r);
-      } else {
-        // Thêm bản ghi mới
-        const newRecord = { ...recordData, id: "rec_" + Date.now().toString() } as StudyRecord;
-        newHistory.push(newRecord);
-      }
-      
-      return { ...s, history: newHistory };
-    }));
+    setStudents(prev => {
+      const next = (prev || []).map(s => {
+        if (!s || s.id !== selectedStudentId) return s;
+
+        let newHistory = Array.isArray(s.history) ? [...s.history] : [];
+        if ('id' in recordData && recordData.id) {
+          // Cập nhật bản ghi cũ
+          newHistory = newHistory.map(r => r.id === recordData.id ? (recordData as StudyRecord) : r);
+        } else {
+          // Thêm bản ghi mới
+          const newRecord = { ...recordData, id: "rec_" + Date.now().toString() } as StudyRecord;
+          newHistory.push(newRecord);
+        }
+
+        return { ...s, history: newHistory };
+      });
+      syncData(next);
+      return next;
+    });
     setIsAddingRecord(false);
     setEditingRecord(null);
   }, [selectedStudentId]);
@@ -97,15 +140,19 @@ const App: React.FC = () => {
   // Xóa bản ghi lịch sử
   const deleteRecord = useCallback((recordId: string) => {
     if (!selectedStudentId || !recordId) return;
-    setStudents(prev => (prev || []).map(s => {
-      if (!s || s.id !== selectedStudentId) return s;
-      const filteredHistory = (s.history || []).filter(r => r && r.id !== recordId);
-      return { ...s, history: filteredHistory };
-    }));
+    setStudents(prev => {
+      const next = (prev || []).map(s => {
+        if (!s || s.id !== selectedStudentId) return s;
+        const filteredHistory = (s.history || []).filter(r => r && r.id !== recordId);
+        return { ...s, history: filteredHistory };
+      });
+      syncData(next);
+      return next;
+    });
   }, [selectedStudentId]);
 
-  const selectedStudent = useMemo(() => 
-    (students || []).find(s => s && s.id === selectedStudentId), 
+  const selectedStudent = useMemo(() =>
+    (students || []).find(s => s && s.id === selectedStudentId),
     [students, selectedStudentId]
   );
 
@@ -133,7 +180,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <button onClick={() => setHideValues(!hideValues)} className="p-2 md:p-3 bg-slate-100 rounded-xl hover:bg-slate-200 transition border border-slate-200">
-              {hideValues ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11-8 11-8z"/><circle cx="12" cy="12" r="3"/></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>}
+              {hideValues ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11-8 11-8z" /><circle cx="12" cy="12" r="3" /></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>}
             </button>
           </div>
         </header>
@@ -141,13 +188,13 @@ const App: React.FC = () => {
         <main className="max-w-7xl mx-auto w-full px-4 py-6 md:py-10 flex-1 flex flex-col gap-8 md:gap-12 overflow-y-auto">
           {!selectedStudentId ? (
             <div className="space-y-12 animate-in fade-in duration-700">
-              <StudentList 
-                students={students || []} 
-                onAdd={addStudent} 
+              <StudentList
+                students={students || []}
+                onAdd={addStudent}
                 onUpdate={updateStudent}
-                onDelete={deleteStudent} 
-                onSelect={(s) => setSelectedStudentId(s.id)} 
-                hideValues={hideValues} 
+                onDelete={deleteStudent}
+                onSelect={(s) => setSelectedStudentId(s.id)}
+                hideValues={hideValues}
               />
 
               <div className="bg-white p-6 md:p-10 rounded-[40px] border-2 border-slate-100 shadow-xl text-center">
@@ -158,8 +205,8 @@ const App: React.FC = () => {
               </div>
             </div>
           ) : (
-            <StudentDetails 
-              student={selectedStudent!} 
+            <StudentDetails
+              student={selectedStudent!}
               onBack={() => setSelectedStudentId(null)}
               onAddRecord={() => setIsAddingRecord(true)}
               onEditRecord={(r) => setEditingRecord(r)}
@@ -170,7 +217,7 @@ const App: React.FC = () => {
         </main>
 
         {(isAddingRecord || editingRecord) && selectedStudent && (
-          <DailyEntryForm 
+          <DailyEntryForm
             student={selectedStudent}
             initialRecord={editingRecord || undefined}
             onSave={recordData => saveRecord(recordData)}
