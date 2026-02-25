@@ -18,19 +18,21 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  const stats = useMemo(() => 
+  const stats = useMemo(() =>
     calculateMonthlyStats(student?.history, student?.schedules, selectedMonth, selectedYear, student?.baseSalary),
     [student?.history, student?.schedules, selectedMonth, selectedYear, student?.baseSalary]
   );
 
-  const historyByDateDesc = useMemo(() => 
-    [...(student?.history || [])].sort((a, b) => b.date.localeCompare(a.date)),
+  const historyByDateDesc = useMemo(() =>
+    [...(student?.history || [])]
+      .filter(r => r && r.date)
+      .sort((a, b) => b.date.localeCompare(a.date)),
     [student?.history]
   );
 
   const lastRecord = historyByDateDesc[0];
   const noHomeworkAssignedLastTime = lastRecord && lastRecord.assignedHomework === 'Không' && lastRecord.status !== 'absent' && !lastRecord.ignoreLateStats;
-  
+
   // Cảnh báo nếu tháng này có 3 buổi trở lên không giao bài tập
   const monthHomeworkWarning = stats.noHomeworkCount >= 3;
 
@@ -107,7 +109,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 font-black shrink-0">!</div>
           <div className="min-w-0">
             <h4 className="text-xs font-black text-red-800 uppercase tracking-widest">Cảnh báo buổi học gần nhất</h4>
-            <p className="text-xs font-bold text-red-600">Buổi học ngày {formatDate(lastRecord.date)} đã được ghi nhận là KHÔNG giao bài tập về nhà.</p>
+            <p className="text-xs font-bold text-red-600">Buổi học ngày {lastRecord?.date ? formatDate(lastRecord.date) : ''} đã được ghi nhận là KHÔNG giao bài tập về nhà.</p>
           </div>
         </div>
       )}
@@ -115,7 +117,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
       <div className="bg-white p-4 md:p-8 rounded-3xl shadow-sm border border-slate-200">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4 md:gap-6">
-            <button onClick={onBack} className="p-3 md:p-4 hover:bg-slate-50 rounded-2xl transition border border-slate-100 shadow-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
+            <button onClick={onBack} className="p-3 md:p-4 hover:bg-slate-50 rounded-2xl transition border border-slate-100 shadow-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg></button>
             <div className="min-w-0">
               <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tighter truncate">{student?.fullName}</h1>
               <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -125,7 +127,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
             </div>
           </div>
           <button onClick={onAddRecord} className="w-full md:w-auto bg-indigo-600 text-white px-6 md:px-10 py-3 md:py-4 rounded-2xl font-black hover:bg-indigo-700 transition flex items-center justify-center gap-3 shadow-xl active:scale-95 text-xs md:text-sm uppercase tracking-widest">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Cập nhật tiến độ
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg> Cập nhật tiến độ
           </button>
         </div>
       </div>
@@ -141,7 +143,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
             <span className="font-black text-slate-700 text-[10px] md:text-xs uppercase">Thời gian:</span>
             <div className="flex gap-2">
               <select value={selectedMonth} onChange={(e) => setSelectedMonth(parseInt(e.target.value))} className="px-3 md:px-5 py-2 border-2 border-slate-100 rounded-xl font-black text-xs md:text-sm outline-none">
-                {Array.from({length: 12}).map((_, i) => <option key={i} value={i}>Tháng {i + 1}</option>)}
+                {Array.from({ length: 12 }).map((_, i) => <option key={i} value={i}>Tháng {i + 1}</option>)}
               </select>
               <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="px-3 md:px-5 py-2 border-2 border-slate-100 rounded-xl font-black text-xs md:text-sm outline-none">
                 {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
@@ -169,7 +171,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
             <div className="bg-white p-6 md:p-8 rounded-[32px] md:rounded-[40px] border border-slate-200 shadow-sm col-span-1 md:col-span-2">
               <p className="text-slate-400 text-[10px] font-black uppercase mb-3 tracking-widest">Tổng kết báo cáo tháng {selectedMonth + 1}</p>
               <div className="text-xs md:text-sm font-medium text-slate-600 leading-relaxed">
-                Tháng <span className="font-black text-slate-800">{selectedMonth + 1}</span>, học sinh có <span className="font-black text-slate-800">{stats.totalSessions}</span> ca học cố định. 
+                Tháng <span className="font-black text-slate-800">{selectedMonth + 1}</span>, học sinh có <span className="font-black text-slate-800">{stats.totalSessions}</span> ca học cố định.
                 Ghi nhận <span className="font-black text-green-600">{stats.attendedCount + stats.makeupCount}</span> buổi đi học.
                 Có <span className="font-black text-amber-600">{stats.noHomeworkCount}</span> buổi giáo viên không giao bài tập mới.
               </div>
@@ -302,10 +304,9 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">{getDayName(r.weekday)} — {r.session}</div>
                       </td>
                       <td className="p-4 md:p-6 text-center">
-                        <span className={`px-3 md:px-5 py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest ${
-                          r.status === 'attended' ? 'bg-green-100 text-green-700' : 
-                          r.status === 'makeup' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
-                        }`}>
+                        <span className={`px-3 md:px-5 py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest ${r.status === 'attended' ? 'bg-green-100 text-green-700' :
+                            r.status === 'makeup' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                          }`}>
                           {r.status === 'attended' ? 'ĐI HỌC' : r.status === 'makeup' ? 'HỌC BÙ' : 'VẮNG MẶT'}
                         </span>
                       </td>
@@ -329,8 +330,8 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="p-4 md:p-6 text-right space-x-2">
-                        <button onClick={() => onEditRecord(r)} className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onClick={() => { if(window.confirm('Xóa bản ghi này?')) onDeleteRecord(r.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+                        <button onClick={() => onEditRecord(r)} className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
+                        <button onClick={() => { if (window.confirm('Xóa bản ghi này?')) onDeleteRecord(r.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg></button>
                       </td>
                     </tr>
                   ))

@@ -157,7 +157,7 @@ const App: React.FC = () => {
       const next = (prev || []).map(s => {
         if (!s || s.id !== selectedStudentId) return s;
 
-        let newHistory = Array.isArray(s.history) ? [...s.history] : [];
+        let newHistory = Array.isArray(s.history) ? s.history.filter(item => item !== null && typeof item === 'object') : [];
         if ('id' in recordData && recordData.id) {
           // Cập nhật bản ghi cũ
           newHistory = newHistory.map(r => r.id === recordData.id ? (recordData as StudyRecord) : r);
@@ -182,7 +182,7 @@ const App: React.FC = () => {
     setStudents(prev => {
       const next = (prev || []).map(s => {
         if (!s || s.id !== selectedStudentId) return s;
-        const filteredHistory = (s.history || []).filter(r => r && r.id !== recordId);
+        const filteredHistory = (s.history || []).filter(r => r && typeof r === 'object' && r.id !== recordId);
         return { ...s, history: filteredHistory };
       });
       syncData(next);

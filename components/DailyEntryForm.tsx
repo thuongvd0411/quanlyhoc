@@ -24,7 +24,7 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
   const [session, setSession] = useState<SessionType>(initialRecord?.session || 'Chiều');
   const [status, setStatus] = useState<AttendanceStatus>(initialRecord?.status || 'attended');
   const [absentReason, setAbsentReason] = useState(initialRecord?.absentReason || '');
-  
+
   // 1. Đầu buổi
   const [homework, setHomework] = useState<HomeworkStatus>(initialRecord?.homework || 'N/A');
   const [formulaTest, setFormulaTest] = useState<TriStateResult>(initialRecord?.formulaTest || 'N/A');
@@ -36,7 +36,7 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
   const [evalNewKnowledge, setEvalNewKnowledge] = useState<number | 'N/A'>(initialRecord?.evalNewKnowledge || 'N/A');
   const [evalQuantity, setEvalQuantity] = useState<number | 'N/A'>(initialRecord?.evalQuantity || 'N/A');
   const [ignoreMidStats, setIgnoreMidStats] = useState(initialRecord?.ignoreMidStats || false);
-  
+
   // 3. Ngoài buổi
   const [hasRegularHomework, setHasRegularHomework] = useState<YesNoNAResult>(initialRecord?.hasRegularHomework || 'N/A');
   const [ignoreOutsideStats, setIgnoreOutsideStats] = useState(initialRecord ? initialRecord.ignoreOutsideStats : true);
@@ -110,13 +110,13 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
       const curDate = new Date(year, month, d);
       const curDateStr = toLocalDateString(curDate);
       const wd = getWeekday(curDateStr);
-      
-      const isSelected = selectedDate.getDate() === d && 
-                         selectedDate.getMonth() === month && 
-                         selectedDate.getFullYear() === year;
-      
+
+      const isSelected = selectedDate.getDate() === d &&
+        selectedDate.getMonth() === month &&
+        selectedDate.getFullYear() === year;
+
       const isScheduled = student?.schedules?.some(s => s.weekday === wd);
-      const existingRecord = student?.history?.find(r => r.date === curDateStr && r.id !== initialRecord?.id);
+      const existingRecord = student?.history?.find(r => r && r.date === curDateStr && r.id !== initialRecord?.id);
 
       let bgColor = 'bg-white text-slate-700 hover:bg-slate-100';
       let textColor = 'text-slate-700';
@@ -175,12 +175,12 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
           <div className="md:col-span-5 space-y-6">
             <div className="border border-slate-200 rounded-3xl p-4 bg-slate-50 shadow-inner">
               <div className="flex justify-between items-center mb-4">
-                <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1 hover:bg-white rounded-lg transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6"/></svg></button>
+                <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className="p-1 hover:bg-white rounded-lg transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="15 18 9 12 15 6" /></svg></button>
                 <span className="text-xs font-black text-slate-800 uppercase tracking-tighter">Tháng {viewDate.getMonth() + 1} / {viewDate.getFullYear()}</span>
-                <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="p-1 hover:bg-white rounded-lg transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6"/></svg></button>
+                <button type="button" onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className="p-1 hover:bg-white rounded-lg transition"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="9 18 15 12 9 6" /></svg></button>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                {['T2','T3','T4','T5','T6','T7','CN'].map(d => <span key={d} className="text-[9px] font-black text-slate-400 uppercase">{d}</span>)}
+                {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => <span key={d} className="text-[9px] font-black text-slate-400 uppercase">{d}</span>)}
               </div>
               <div className="grid grid-cols-7 gap-1 place-items-center">
                 {renderCalendar()}
@@ -192,7 +192,7 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
                 <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-white ring-1 ring-indigo-300"></div><span className="text-[8px] font-bold text-slate-400 uppercase">Lịch</span></div>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Ca học thực tế</label>
               <div className="grid grid-cols-3 gap-2">
@@ -265,14 +265,14 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
                       <label className="text-[9px] font-black text-slate-400 uppercase">Kiến thức mới</label>
                       <select value={evalNewKnowledge} onChange={(e) => setEvalNewKnowledge(e.target.value === 'N/A' ? 'N/A' : parseInt(e.target.value))} className="w-full p-3 border-2 border-slate-100 rounded-2xl text-xs font-black bg-white outline-none focus:border-emerald-500 appearance-none">
                         <option value="N/A">N/A</option>
-                        {Array.from({length: 10}, (_, i) => <option key={i+1} value={i+1}>{i+1} / 10</option>)}
+                        {Array.from({ length: 10 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1} / 10</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[9px] font-black text-slate-400 uppercase">Số lượng bài</label>
                       <select value={evalQuantity} onChange={(e) => setEvalQuantity(e.target.value === 'N/A' ? 'N/A' : parseInt(e.target.value))} className="w-full p-3 border-2 border-slate-100 rounded-2xl text-xs font-black bg-white outline-none focus:border-emerald-500 appearance-none">
                         <option value="N/A">N/A</option>
-                        {Array.from({length: 10}, (_, i) => <option key={i+1} value={i+1}>{i+1} / 10</option>)}
+                        {Array.from({ length: 10 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1} / 10</option>)}
                       </select>
                     </div>
                   </div>
