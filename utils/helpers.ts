@@ -2,32 +2,41 @@
 import { Student, StudyRecord, MonthlyStats, Schedule } from '../types';
 
 export const getWeekday = (dateStr: string): number => {
-  if (!dateStr) return 0;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  const d = date.getDay(); 
-  return d === 0 ? 6 : d - 1; 
+  try {
+    if (!dateStr || typeof dateStr !== 'string') return 0;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return 0;
+    const [year, month, day] = parts.map(Number);
+    const date = new Date(year, month - 1, day);
+    const d = date.getDay();
+    return isNaN(d) ? 0 : (d === 0 ? 6 : d - 1);
+  } catch (e) { return 0; }
 };
 
 export const toLocalDateString = (date: Date): string => {
-  if (!date) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  try {
+    if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch (e) { return ''; }
 };
 
 export const calculateMonthlyStats = (
-  history: StudyRecord[] | undefined, 
+  history: StudyRecord[] | undefined,
   schedules: Schedule[] = [],
-  month: number, 
-  year: number, 
+  month: number,
+  year: number,
   baseSalary: number = 0
 ): MonthlyStats => {
   const records = (history || []).filter(r => {
-    if (!r?.date) return false;
-    const d = new Date(r.date);
-    return d.getMonth() === month && d.getFullYear() === year;
+    try {
+      if (!r?.date || typeof r.date !== 'string') return false;
+      const d = new Date(r.date);
+      if (isNaN(d.getTime())) return false;
+      return d.getMonth() === month && d.getFullYear() === year;
+    } catch (e) { return false; }
   });
 
   let totalScheduledSessions = 0;
@@ -74,14 +83,14 @@ export const calculateMonthlyStats = (
   };
 
   return {
-    month, 
-    year, 
-    totalSessions: totalScheduledSessions, 
-    attendedCount, 
-    absentCount, 
-    makeupCount, 
-    totalSalary, 
-    avgScores, 
+    month,
+    year,
+    totalSessions: totalScheduledSessions,
+    attendedCount,
+    absentCount,
+    makeupCount,
+    totalSalary,
+    avgScores,
     homeworkCounts,
     formulaPassCount: formulaRecords.filter(r => r.formulaTest === 'Đạt').length,
     oldLessonPassCount: oldLessonRecords.filter(r => r.oldLessonTest === 'Đạt').length,
@@ -99,9 +108,15 @@ export const calculateMonthlyStats = (
 };
 
 export const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('vi-VN');
+  try {
+    if (!dateStr || typeof dateStr !== 'string') return '';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return '';
+    const [year, month, day] = parts.map(Number);
+    const d = new Date(year, month - 1, day);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('vi-VN');
+  } catch (e) { return ''; }
 };
 
 export const formatCurrency = (amount: number) => {

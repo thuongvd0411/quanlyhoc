@@ -25,7 +25,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
 
   const historyByDateDesc = useMemo(() =>
     [...(student?.history || [])]
-      .filter(r => r && r.date)
+      .filter(r => r && typeof r.date === 'string')
       .sort((a, b) => b.date.localeCompare(a.date)),
     [student?.history]
   );
@@ -39,17 +39,24 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
   const chartData = useMemo(() => {
     return (student?.history || [])
       .filter(r => {
-        if (!r?.date) return false;
-        const d = new Date(r.date);
-        return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear && (r.status === 'attended' || r.status === 'makeup');
+        try {
+          if (!r?.date || typeof r.date !== 'string') return false;
+          const d = new Date(r.date);
+          if (isNaN(d.getTime())) return false;
+          return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear && (r.status === 'attended' || r.status === 'makeup');
+        } catch (e) { return false; }
       })
       .sort((a, b) => a.date.localeCompare(b.date))
-      .map(r => ({
-        date: r.date.split('-')[2],
-        knowledge: (r.ignoreMidStats || r.evalNewKnowledge === 'N/A') ? null : r.evalNewKnowledge,
-        quantity: (r.ignoreMidStats || r.evalQuantity === 'N/A') ? null : r.evalQuantity,
-        test: (r.ignoreTestStats || r.testScore === undefined) ? null : r.testScore
-      }));
+      .map(r => {
+        try {
+          return {
+            date: r.date.split('-')[2] || '',
+            knowledge: (r.ignoreMidStats || r.evalNewKnowledge === 'N/A') ? null : r.evalNewKnowledge,
+            quantity: (r.ignoreMidStats || r.evalQuantity === 'N/A') ? null : r.evalQuantity,
+            test: (r.ignoreTestStats || r.testScore === undefined) ? null : r.testScore
+          };
+        } catch (e) { return null; }
+      }).filter(r => r !== null);
   }, [student?.history, selectedMonth, selectedYear]);
 
   // Pie Charts Data
@@ -305,7 +312,7 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
                       </td>
                       <td className="p-4 md:p-6 text-center">
                         <span className={`px-3 md:px-5 py-1.5 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest ${r.status === 'attended' ? 'bg-green-100 text-green-700' :
-                            r.status === 'makeup' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                          r.status === 'makeup' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
                           }`}>
                           {r.status === 'attended' ? 'ĐI HỌC' : r.status === 'makeup' ? 'HỌC BÙ' : 'VẮNG MẶT'}
                         </span>
