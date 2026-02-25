@@ -20,12 +20,20 @@ const App: React.FC = () => {
   const [hideValues, setHideValues] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'loading' | 'success' | 'error'>('idle');
 
+  // Hàm loại bỏ undefined để tránh lỗi Firestore
+  const sanitizeData = (data: any): any => {
+    return JSON.parse(JSON.stringify(data, (key, value) => {
+      return value === undefined ? null : value;
+    }));
+  };
+
   // Hàm lưu dữ liệu lên Firebase và Local Backup
   const syncData = async (newStudents: Student[]) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newStudents));
       const docRef = doc(db, 'appData', FIREBASE_DOC_ID);
-      await setDoc(docRef, { students: newStudents });
+      const sanitized = sanitizeData(newStudents);
+      await setDoc(docRef, { students: sanitized });
     } catch (e) {
       console.error("Lỗi khi lưu dữ liệu lên Firebase:", e);
     }
@@ -73,7 +81,8 @@ const App: React.FC = () => {
     setSyncStatus('saving');
     try {
       const docRef = doc(db, 'appData', FIREBASE_DOC_ID);
-      await setDoc(docRef, { students: students });
+      const sanitized = sanitizeData(students);
+      await setDoc(docRef, { students: sanitized });
       setSyncStatus('success');
       setTimeout(() => setSyncStatus('idle'), 2000);
       alert('Đã cập nhật dữ liệu hiện tại Lên Máy Chủ (Firebase) thành công!');
