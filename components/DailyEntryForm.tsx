@@ -20,7 +20,18 @@ interface Props {
 const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialRecord }) => {
   if (!student) return null;
 
-  const [selectedDate, setSelectedDate] = useState(initialRecord ? new Date(initialRecord.date) : new Date());
+  // Safe date parser to prevent crash when initialRecord.date is an object from Firestore
+  const safelyParseDate = (dateVal: any) => {
+    try {
+      if (!dateVal || typeof dateVal !== 'string') return new Date();
+      const d = new Date(dateVal);
+      return isNaN(d.getTime()) ? new Date() : d;
+    } catch (e) {
+      return new Date();
+    }
+  };
+
+  const [selectedDate, setSelectedDate] = useState(initialRecord ? safelyParseDate(initialRecord.date) : new Date());
   const [session, setSession] = useState<SessionType>(initialRecord?.session || 'Chiều');
   const [status, setStatus] = useState<AttendanceStatus>(initialRecord?.status || 'attended');
   const [absentReason, setAbsentReason] = useState(initialRecord?.absentReason || '');
@@ -49,7 +60,7 @@ const DailyEntryForm: React.FC<Props> = ({ onSave, onClose, student, initialReco
   const [assignedHomework, setAssignedHomework] = useState<YesNoNAResult>(initialRecord?.assignedHomework || 'N/A');
   const [ignoreLateStats, setIgnoreLateStats] = useState(initialRecord?.ignoreLateStats || false);
 
-  const [viewDate, setViewDate] = useState(initialRecord ? new Date(initialRecord.date) : new Date());
+  const [viewDate, setViewDate] = useState(initialRecord ? safelyParseDate(initialRecord.date) : new Date());
 
   useEffect(() => {
     if (!initialRecord && student?.schedules) {
