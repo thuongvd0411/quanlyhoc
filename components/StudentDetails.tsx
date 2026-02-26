@@ -328,9 +328,9 @@ const StudentDetails: React.FC<Props> = ({ student, onBack, onAddRecord, onEditR
                             ) : (
                               <div className="text-[9px] text-slate-300 italic font-bold uppercase">Bỏ qua thống kê tiến độ</div>
                             )}
-                            {r.testScore !== undefined && !r.ignoreTestStats ? (
+                            {typeof r.testScore === 'number' && !r.ignoreTestStats ? (
                               <div className="flex justify-between items-center w-32 border-t border-slate-100 mt-1 pt-1"><span className="text-[9px] text-emerald-600 font-black uppercase">ĐIỂM ĐỊNH KỲ</span><span className="text-[10px] font-black text-emerald-700">{r.testScore.toFixed(2)}</span></div>
-                            ) : r.testScore !== undefined && (
+                            ) : typeof r.testScore === 'number' && (
                               <div className="text-[9px] text-slate-300 italic font-bold uppercase mt-1">Điểm: {r.testScore.toFixed(2)} (Bỏ qua TK)</div>
                             )}
                           </div>
