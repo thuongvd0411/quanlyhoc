@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Student, StudyRecord } from '../types';
+import { Student, StudyRecord, Schedule } from '../types';
 import { calculateMonthlyStats, formatCurrency, formatDate } from '../utils/helpers';
 
 interface Props {
@@ -15,7 +15,7 @@ const RevenueBreakdown: React.FC<Props> = ({ students, hideValues }) => {
 
     const statsBreakdown = useMemo(() => {
         let total = 0;
-        const details: { id: string; name: string; className: string; amount: number; sessions: number; history: StudyRecord[] }[] = [];
+        const details: { id: string; name: string; className: string; amount: number; sessions: number; history: StudyRecord[]; schedules: Schedule[] }[] = [];
 
         students.forEach(student => {
             if (!student) return;
@@ -35,7 +35,8 @@ const RevenueBreakdown: React.FC<Props> = ({ students, hideValues }) => {
                     className: student.className,
                     amount: studentTotal,
                     sessions: stats.attendedCount + stats.makeupCount,
-                    history: monthHistory
+                    history: monthHistory,
+                    schedules: student.schedules
                 });
                 total += studentTotal;
             }
@@ -45,6 +46,11 @@ const RevenueBreakdown: React.FC<Props> = ({ students, hideValues }) => {
 
         return { total, details };
     }, [students, selectedMonth, selectedYear]);
+
+    const getStartDayIndex = (m: number, y: number) => {
+        const d = new Date(y, m, 1).getDay();
+        return d === 0 ? 6 : d - 1; // 0 for Monday, 6 for Sunday
+    };
 
     return (
         <div className="bg-white rounded-[32px] shadow-sm border border-slate-200 overflow-hidden">
@@ -114,25 +120,69 @@ const RevenueBreakdown: React.FC<Props> = ({ students, hideValues }) => {
                                     </div>
 
                                     {expandedStudentId === item.id && (
-                                        <div className="p-4 border-t border-slate-100 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Lịch điểm danh tháng {selectedMonth + 1}</h4>
-                                            {item.history.length === 0 ? (
-                                                <div className="text-[10px] text-slate-400 font-bold italic bg-white p-3 rounded-xl border border-slate-100 text-center">Không tìm thấy bản ghi điểm danh nào.</div>
-                                            ) : (
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                    {item.history.map(record => (
-                                                        <div key={record.id} className="bg-white border border-slate-200 p-2.5 rounded-xl flex items-center justify-between text-xs shadow-sm hover:border-emerald-200 transition">
-                                                            <div className="flex flex-col gap-1">
-                                                                <span className="font-black text-slate-700">{formatDate(record.date)}</span>
-                                                                {record.note && <span className="text-[9px] text-slate-400 truncate max-w-[120px]" title={record.note}>{record.note}</span>}
-                                                            </div>
-                                                            <span className={`text-[8px] px-2 py-1 rounded-full font-black uppercase ${record.isPresent ? 'bg-emerald-100 text-emerald-700' : (record.isMakeup ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700')}`}>
-                                                                {record.isPresent ? 'Có mặt' : (record.isMakeup ? 'Học bù' : 'Vắng')}
-                                                            </span>
-                                                        </div>
+                                        <div className="p-4 md:p-6 border-t border-slate-100 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="bg-white rounded-[24px] border border-slate-200 p-5 md:p-6 shadow-sm max-w-sm mx-auto">
+                                                <div className="flex items-center justify-between mb-5 px-1">
+                                                    <div className="text-xs font-black text-slate-800 tracking-widest uppercase">Tháng {selectedMonth + 1} / {selectedYear}</div>
+                                                </div>
+
+                                                <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2">
+                                                    {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
+                                                        <div key={d} className="text-[10px] font-black text-slate-400 text-center uppercase">{d}</div>
                                                     ))}
                                                 </div>
-                                            )}
+                                                <div className="grid grid-cols-7 gap-1 md:gap-2">
+                                                    {/* padding */}
+                                                    {Array.from({ length: getStartDayIndex(selectedMonth, selectedYear) }).map((_, i) => (
+                                                        <div key={`empty-${i}`} className="h-10 md:h-12"></div>
+                                                    ))}
+
+                                                    {/* days */}
+                                                    {Array.from({ length: new Date(selectedYear, selectedMonth + 1, 0).getDate() }).map((_, i) => {
+                                                        const day = i + 1;
+                                                        const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                                        const record = item.history.find(r => r.date === dateStr);
+                                                        const dateObj = new Date(selectedYear, selectedMonth, day);
+                                                        const dayOfWeek = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1; // 0-6
+
+                                                        const isScheduled = item.schedules.some(s => s.weekday === dayOfWeek);
+
+                                                        let bgClass = "bg-slate-50 text-slate-500 font-bold hover:bg-slate-100";
+                                                        let dotClass = "";
+
+                                                        if (record) {
+                                                            if (record.status === 'attended') {
+                                                                bgClass = "bg-emerald-500 text-white font-black shadow-md transform hover:scale-110 active:scale-95";
+                                                                dotClass = "bg-emerald-200";
+                                                            } else if (record.status === 'makeup') {
+                                                                bgClass = "bg-amber-400 text-white font-black shadow-md transform hover:scale-110 active:scale-95";
+                                                                dotClass = "bg-amber-100";
+                                                            } else if (record.status === 'absent') {
+                                                                bgClass = "bg-red-500 text-white font-black shadow-md transform hover:scale-110 active:scale-95";
+                                                                dotClass = "bg-red-200";
+                                                            }
+                                                        } else if (isScheduled) {
+                                                            bgClass = "bg-white text-indigo-600 font-black border-2 border-indigo-100 shadow-sm";
+                                                        }
+
+                                                        return (
+                                                            <div key={day} className={`h-10 md:h-12 rounded-xl flex flex-col items-center justify-center text-[10px] md:text-sm transition cursor-default ${bgClass}`} title={record?.absentReason || ''}>
+                                                                {day}
+                                                                {(record || isScheduled) && (
+                                                                    <div className={`w-1 h-1 rounded-full mt-0.5 ${dotClass || (isScheduled ? 'bg-indigo-300' : '')}`}></div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                <div className="flex items-center justify-center gap-3 md:gap-5 mt-6 text-[9px] font-black uppercase tracking-widest text-slate-500 pt-5 border-t border-slate-100">
+                                                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div> Học</div>
+                                                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm"></div> Bù</div>
+                                                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm"></div> Nghỉ</div>
+                                                    <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-200 bg-white"></div> Lịch</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
