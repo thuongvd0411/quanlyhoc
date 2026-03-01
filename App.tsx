@@ -7,6 +7,8 @@ import StudentList from './components/StudentList';
 import StudentDetails from './components/StudentDetails';
 import DailyEntryForm from './components/DailyEntryForm';
 import AuthGuard from './components/AuthGuard';
+import DailyReminders from './components/DailyReminders';
+import RevenueBreakdown from './components/RevenueBreakdown';
 import { calculateMonthlyStats, formatCurrency } from './utils/helpers';
 
 const STORAGE_KEY = 'edu_tracking_data_v5';
@@ -278,7 +280,16 @@ const App: React.FC = () => {
 
         <main className="max-w-7xl mx-auto w-full px-4 py-6 md:py-10 flex-1 flex flex-col gap-8 md:gap-12 overflow-y-auto">
           {!selectedStudentId ? (
-            <div className="space-y-12 animate-in fade-in duration-700">
+            <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700">
+
+              <DailyReminders
+                students={students}
+                onSelectStudent={setSelectedStudentId}
+                onAddRecord={() => setIsAddingRecord(true)}
+              />
+
+              <RevenueBreakdown students={students} hideValues={hideValues} />
+
               <StudentList
                 students={students || []}
                 onAdd={addStudent}
@@ -287,13 +298,6 @@ const App: React.FC = () => {
                 onSelect={(s) => setSelectedStudentId(s.id)}
                 hideValues={hideValues}
               />
-
-              <div className="bg-white p-6 md:p-10 rounded-[40px] border-2 border-slate-100 shadow-xl text-center">
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Doanh thu dự kiến tháng {new Date().getMonth() + 1}</h2>
-                <div className="text-3xl md:text-4xl font-black text-slate-900 tracking-tighter">
-                  {hideValues ? '•••••••• ₫' : formatCurrency(globalMonthlySalary)}
-                </div>
-              </div>
             </div>
           ) : (
             <StudentDetails
