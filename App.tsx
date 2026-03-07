@@ -8,6 +8,7 @@ import StudentDetails from './components/StudentDetails';
 import DailyEntryForm from './components/DailyEntryForm';
 import AuthGuard from './components/AuthGuard';
 import DailyReminders from './components/DailyReminders';
+import MissingReminders from './components/MissingReminders';
 import RevenueBreakdown from './components/RevenueBreakdown';
 import { calculateMonthlyStats, formatCurrency } from './utils/helpers';
 
@@ -282,6 +283,12 @@ const App: React.FC = () => {
         <main className="max-w-7xl mx-auto w-full px-4 py-6 md:py-10 flex-1 flex flex-col gap-8 md:gap-12 overflow-y-auto">
           {!selectedStudentId ? (
             <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700">
+
+              <MissingReminders
+                students={students}
+                onSelectStudent={setSelectedStudentId}
+                onAddRecord={() => setIsAddingRecord(true)}
+              />
 
               <DailyReminders
                 students={students}
