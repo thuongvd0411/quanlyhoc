@@ -14,7 +14,7 @@ const MissingReminders: React.FC<Props> = ({ students, onSelectStudent, onAddRec
     const missingReminders = useMemo(() => {
         const today = new Date();
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        
+
         // We only check up to yesterday
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
@@ -65,7 +65,14 @@ const MissingReminders: React.FC<Props> = ({ students, onSelectStudent, onAddRec
         return missing;
     }, [students]);
 
-    if (missingReminders.length === 0) return null;
+    if (missingReminders.length === 0) {
+        return (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-3 text-slate-500 text-sm">
+                <span className="text-green-500">✅</span>
+                <span>Tuyệt vời! Không có nhắc việc nào bị bỏ lỡ từ đầu tháng. (Đã nạp bản cập nhật mới)</span>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-[32px] shadow-sm border border-rose-200 overflow-hidden relative">
@@ -117,7 +124,7 @@ const MissingReminders: React.FC<Props> = ({ students, onSelectStudent, onAddRec
                                 <div className="flex flex-col gap-1">
                                     <div className="font-black text-slate-800 text-sm md:text-base flex items-center gap-2">
                                         <span className="text-rose-500">❌</span>
-                                        {r.studentName} 
+                                        {r.studentName}
                                         <span className="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full uppercase">Ca {r.session}</span>
                                     </div>
                                     <div className="text-xs font-bold text-rose-700 ml-6 flex items-center gap-1">
